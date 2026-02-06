@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>语言游戏：甲虫机器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>语言游戏：甲虫机器 (EVOLUTION)</title>
     <!-- 核心库 CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -16,15 +16,21 @@
         @keyframes scanner-line { 0% { top: -10%; } 100% { top: 110%; } }
         .bg-stippling { background-image: radial-gradient(#bcff00 0.8px, transparent 0.8px); background-size: 8px 8px; }
         .cyber-glitch-active { animation: jitter 0.08s linear infinite; }
-        @keyframes jitter { 0% { transform: translate(0,0); } 50% { transform: translate(-1.5px, 1px); } 100% { transform: translate(0,0); } }
-        
+        @keyframes jitter { 0% { transform: translate(0,0); } 50% { transform: translate(-2px, 1px); } 100% { transform: translate(0,0); } }
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(188, 255, 0, 0.3); border-radius: 10px; }
-        
         .word-fragment { text-shadow: 0 0 10px #bcff00; cursor: crosshair; user-select: none; }
-        body { background-color: #020502; margin: 0; overflow: hidden; color: #cbd5e1; font-family: 'Inter', -apple-system, sans-serif; }
         
-        /* 移动端横屏引导 */
+        body { 
+            background-color: #020502; 
+            margin: 0; 
+            overflow: hidden; 
+            color: #cbd5e1; 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            height: 100dvh;
+        }
+        #root { height: 100%; }
+
         @media screen and (orientation: portrait) and (max-width: 768px) {
             .portrait-warning { display: flex; }
         }
@@ -38,7 +44,6 @@
         const { motion, AnimatePresence } = window.Motion;
         const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
-        // --- 图标组件 ---
         const Icon = ({ name, size = 16, className = "" }) => (
             <span className={className} style={{ width: size, height: size, display: 'inline-block' }}>
                 <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -47,34 +52,41 @@
                     {name === 'activity' && <path d="M22 12h-4l-3 9L9 3l-3 9H2" />}
                     {name === 'share' && <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8 M16 6l-4-4-4 4 M12 2v13" />}
                     {name === 'refresh' && <path d="M23 4v6h-6 M1 20v-6h6 M3.51 9a9 9 0 0 1 14.85-3.36L23 10 M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />}
-                    {name === 'help' && (
-                        <React.Fragment>
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3 M12 17h.01" />
-                        </React.Fragment>
-                    )}
+                    {name === 'help' && <React.Fragment><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3 M12 17h.01" /></React.Fragment>}
                     {name === 'zap' && <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />}
                     {name === 'rotate' && <path d="M1 4v6h6 M23 20v-6h-6 M20.49 9A9 9 0 0 0 5.64 5.64L1 10 M3.51 15a9 9 0 0 0 14.85 3.36L23 14" />}
+                    {name === 'image' && <React.Fragment><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></React.Fragment>}
+                    {name === 'ghost' && <path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z" />}
                 </svg>
             </span>
         );
 
+        // --- 哲学协商题目库 ---
         const NEGOTIATION_DECK = [
-            { id: 'n1', word: "PRIVATE", question: "如果一个人的‘痛’是完全私人的，那‘痛’这个词如何能被另一个人理解？", options: [{ text: "通过社会规训的同构", consensus: 12, stability: -15, log: "将私人体验折算为公共符号。" }, { text: "无法理解，只是模仿", consensus: -8, stability: 15, log: "守卫不可言说的孤独质感。" }] },
-            { id: 'n2', word: "BEETLE", question: "如果每个人手里都有一个永远不准给别人看的盒子，大家都说里面有‘甲虫’，这东西存在吗？", options: [{ text: "名字本身就是存在", consensus: 18, stability: -20, log: "承认语言的虚构力量。" }, { text: "虚无，只是语言游戏", consensus: -5, stability: 10, log: "质疑公共契约的真实性。" }] },
-            { id: 'n3', word: "LOGIC", question: "逻辑是世界的骨架，还是仅仅是我们观察世界的眼镜？", options: [{ text: "客观的逻辑骨架", consensus: 14, stability: -10, log: "向数学的必然性投降。" }, { text: "主观的观察眼镜", consensus: -5, stability: 18, log: "保留自我的感知偏移。" }] }
+            { id: 'n1', word: "PRIVATE", question: "如果一个人的‘痛’是完全私人的，那‘痛’这个词如何能被另一个人理解？", options: [{ text: "通过社会规训的同构", consensus: 12, stability: -15 }, { text: "无法理解，只是模仿", consensus: -8, stability: 15 }] },
+            { id: 'n2', word: "BEETLE", question: "如果每个人手里都有一个永远不准给别人看的盒子，大家都说里面有‘甲虫’，这东西存在吗？", options: [{ text: "名字本身就是存在", consensus: 18, stability: -20 }, { text: "虚无，只是语言游戏", consensus: -5, stability: 10 }] },
+            { id: 'n3', word: "LOGIC", question: "逻辑是世界的骨架，还是仅仅是我们观察世界的眼镜？", options: [{ text: "客观的逻辑骨架", consensus: 14, stability: -10 }, { text: "主观的观察眼镜", consensus: -5, stability: 18 }] },
+            { id: 'n4', word: "SILENCE", question: "‘对于不可言说之物，必须保持沉默。’你现在是否感觉到了某种不可言说的痛？", options: [{ text: "遵从禁令保持沉默", consensus: -10, stability: 25 }, { text: "试图定义强行言说", consensus: 15, stability: -20 }] },
+            { id: 'n5', word: "RULES", question: "遵循规则是‘盲目地’进行的吗？", options: [{ text: "是的，这是一种习俗", consensus: 12, stability: -10 }, { text: "不，我在创造新规则", consensus: -20, stability: 25 }] },
+            { id: 'n6', word: "GAME", question: "所有的‘游戏’都有共同点吗？还是仅仅只有‘家族相似性’？", options: [{ text: "存在共同的定义", consensus: 15, stability: -15 }, { text: "只有家族相似性", consensus: -5, stability: 20 }] },
+            { id: 'n7', word: "USE", question: "一个词的意义是在它的定义里，还是在它的‘使用’中？", options: [{ text: "在逻辑定义中", consensus: 10, stability: -12 }, { text: "在动态使用中", consensus: 5, stability: 22 }] },
+            { id: 'n8', word: "LIMIT", question: "我语言的界限是否意味着我世界的界限？", options: [{ text: "世界即言说之物", consensus: 18, stability: -25 }, { text: "存在无法言说的溢出", consensus: -12, stability: 30 }] },
+            { id: 'n19', word: "BOX", question: "如果盒子是空的，但大家都决定表现得像是有甲虫，这是否等同于‘有甲虫’？", options: [{ text: "等同，意义在于行为", consensus: 20, stability: -20 }, { text: "不等同，真理不容欺骗", consensus: -20, stability: 30 }] },
+            { id: 'n20', word: "WORLD", question: "世界是事实的总和，还是物体的总和？", options: [{ text: "事实与逻辑的总和", consensus: 18, stability: -12 }, { text: "物体与感知的总和", consensus: -10, stability: 25 }] }
         ];
 
-        const FRAGMENT_WORDS = ["PRIVATE", "LOGIC", "SENSORY", "OBJECT", "PAIN", "BEETLE", "GRAMMAR", "TRUTH", "MEANING", "GAME"];
+        const FRAGMENT_WORDS = ["LOGIC", "TRUTH", "MEANING", "GAME", "USE", "RULES", "WORLD", "LIMIT"];
+        const FORBIDDEN_WORDS = ["MY_OWN_PAIN", "UNNAMABLE", "RAW_QUALIA"];
+        const FAKE_WORDS = ["BLAH_BLAH", "IDLE_TALK", "NOISE"];
 
         const HUDBar = ({ value, color, icon, label }) => (
-            <div className="mb-4 landscape:mb-3 relative">
-                <div className="flex justify-between items-end mb-1 text-[10px] uppercase tracking-widest text-slate-400 font-mono">
+            <div className="mb-6 landscape:mb-4 relative">
+                <div className="flex justify-between items-end mb-1.5 text-[10px] uppercase tracking-[0.2em] text-slate-400 font-mono">
                     <span className="flex items-center gap-1.5 font-bold"><Icon name={icon} size={10} className={color} /> {label}</span>
                     <span className={`${color} text-[10px] font-black`}>{Math.floor(Math.max(0, Math.min(100, value)))}%</span>
                 </div>
-                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                    <motion.div className={`h-full ${color.replace('text-', 'bg-')}`} initial={{ width: 0 }} animate={{ width: `${Math.min(100, Math.max(0, value))}%` }} transition={{ type: 'spring', stiffness: 60, damping: 15 }} />
+                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                    <motion.div className={`h-full ${color.replace('text-', 'bg-')}`} initial={{ width: 0 }} animate={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
                 </div>
             </div>
         );
@@ -91,76 +103,58 @@
             }, [stability]);
 
             return (
-                <div className="mt-auto pt-4 border-t border-white/10 group relative min-h-[140px] z-30">
-                    <div className="flex justify-between items-center mb-2 px-1">
-                        <div className="text-[9px] text-[#bcff00] font-mono font-black tracking-widest uppercase">神经矩阵</div>
-                        <div className={`text-[8px] font-mono ${nodes.filter(n=>n.corrupted).length > 5 ? 'text-rose-500 animate-pulse' : 'text-[#bcff00]'}`}>
-                            DECAY: +{nodes.filter(n=>n.corrupted).length}%
-                        </div>
+                <div className="mt-8 pt-6 border-t border-white/10 group relative min-h-[160px] shrink-0 z-30">
+                    <div className="flex justify-between items-center mb-3 px-1 text-[9px] font-mono font-black tracking-widest uppercase">
+                        <div className="text-[#bcff00]/60">神经矩阵监控</div>
+                        <div className={`${nodes.filter(n=>n.corrupted).length > 5 ? 'text-rose-500 animate-pulse' : 'text-[#bcff00]/40'}`}>DECAY: +{nodes.filter(n=>n.corrupted).length}%</div>
                     </div>
-                    <div className="grid grid-cols-5 gap-1.5 p-2 bg-black/60 rounded-lg border border-white/10 shadow-2xl relative">
+                    <div className="grid grid-cols-5 gap-2 p-3 bg-black/60 rounded-xl border border-white/10 shadow-2xl relative">
+                        <div className="absolute inset-0 pointer-events-none border-b border-[#bcff00]/5" style={{ height: '100%', animation: 'scanner-line 4s linear infinite' }} />
                         {nodes.map((node) => (
-                            <motion.div 
-                                key={node.id} 
-                                onClick={() => { if (node.corrupted) { setNodes(prev => prev.map(n => n.id === node.id ? { ...n, corrupted: false } : n)); onFixNode(); } }} 
-                                className={`h-2.5 rounded-sm cursor-pointer transition-all duration-300 ${node.corrupted ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-[#bcff00]/10 border border-[#bcff00]/20'}`} 
-                                whileTap={{ scale: 1.5 }} 
-                                animate={node.corrupted ? { opacity: [1, 0.4, 1], scale: [1, 1.1, 1] } : {}} 
-                            />
+                            <motion.div key={node.id} onClick={() => { if (node.corrupted) { setNodes(prev => prev.map(n => n.id === node.id ? { ...n, corrupted: false } : n)); onFixNode(); } }} className={`h-3 rounded-sm cursor-pointer transition-all duration-300 ${node.corrupted ? 'bg-rose-500 shadow-[0_0_10px_#f43f5e]' : 'bg-[#bcff00]/10 border border-[#bcff00]/20'}`} whileTap={{ scale: 1.5 }} animate={node.corrupted ? { opacity: [1, 0.4, 1], scale: [1, 1.1, 1] } : {}} />
                         ))}
                     </div>
                 </div>
             );
         };
 
-        const CyberScarabEntity = ({ isOpen, stability, pulseRate, isPerfect, isEventActive, isReflecting, glitch }) => {
+        const CyberScarabEntity = ({ isOpen, stability, pulseRate, isPerfect, isEventActive, isReflecting, glitch, consensus }) => {
             const themeColor = isEventActive ? "#bcff00" : (stability < 30 ? "#ff3366" : (isPerfect ? "#ffffff" : "#bcff00"));
             const mandibleColor = "#ff2200";
+            
+            const isSquareEffect = consensus > 85; 
+            const isFalling = stability < 25; 
 
             return (
                 <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-                    <AnimatePresence>
-                        {isReflecting && (
-                            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1.2, opacity: 1 }} exit={{ scale: 1.8, opacity: 0 }} className="absolute z-0">
-                                <svg width="600" height="600" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="#bcff00" strokeWidth="0.5" opacity="0.3" style={{ transformOrigin: 'center', animation: 'pulse-ring 2s infinite' }} /></svg>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                    <svg viewBox="0 0 1000 1400" className={`w-full max-w-full h-full drop-shadow-[0_0:50px_rgba(188,255,0,0.15)] transition-colors duration-500 ${glitch ? 'cyber-glitch-active' : ''}`}>
+                    <AnimatePresence>{isReflecting && (<motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1.2, opacity: 1 }} exit={{ scale: 1.8, opacity: 0 }} className="absolute z-0"><svg width="600" height="600" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="#bcff00" strokeWidth="0.5" opacity="0.3" style={{ transformOrigin: 'center', animation: 'pulse-ring 2s infinite' }} /></svg></motion.div>)}</AnimatePresence>
+                    <svg viewBox="0 0 1000 1400" className={`w-full max-w-full h-full drop-shadow-[0_0:50px_rgba(188,255,0,0.15)] transition-all duration-700 ${glitch ? 'cyber-glitch-active' : ''}`}>
                         <defs>
                             <linearGradient id="elytraGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#0a120a" /><stop offset="50%" stopColor={isEventActive ? "#1a2a1a" : (isPerfect ? "#2e4d34" : "#1a2a1a")} /><stop offset="100%" stopColor="#0a120a" /></linearGradient>
                             <linearGradient id="mandGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#ff9999" /><stop offset="100%" stopColor={mandibleColor} /></linearGradient>
                         </defs>
-
                         <g stroke={themeColor} strokeWidth="4" fill="none" opacity="0.6">
                             {[1, -1].map(side => (
                                 <g key={`side-${side}`} transform={`translate(500, 850) scale(${side}, 1)`}>
-                                    <motion.path d="M 30,-250 L 140,-450 L 290,-420 L 400,-600 L 450,-700" animate={isPerfect ? { x: [0, 8, 0] } : (isEventActive ? { y: [0, -5, 0] } : {})} />
+                                    <motion.path d="M 30,-250 L 140,-450 L 290,-420 L 400,-600 L 450,-700" animate={isPerfect ? { x: [0, 8, 0] } : (isEventActive ? { y: [0, -5, 0] } : (isFalling ? { x: [0, -10, 0] } : {}))} />
                                     <circle cx="140" cy="-450" r="8" fill={themeColor} />
                                     <path d="M 450,-700 L 420,-740 M 450,-700 L 490,-720" strokeWidth="2.5" />
-                                    <path d="M 60,-50 L 280,-100 L 380,-50 L 440,100" /><circle cx="280" cy="-100" r="6" fill={themeColor} />
-                                    <path d="M 40,250 L 220,400 L 350,550 L 320,620" /><circle cx="220" cy="400" r="7" fill={themeColor} />
-                                    <path d="M 320,620 L 300,650 M 320,620 L 340,645" strokeWidth="2" />
+                                    <path d="M 60,-50 L 280,-100 L 380,-50 L 440,100" /><path d="M 40,250 L 220,400 L 350,550 L 320,620" />
                                 </g>
                             ))}
                         </g>
-
-                        {/* 红色大螯：硬编码独立路径修复，杜绝镜像重叠 */}
                         <g transform="translate(500, 580)">
-                            <motion.path d="M 40,0 C 150,-180 270,-280 270,-420 C 270,-520 200,-560 130,-500 C 220,-460 230,-300 100,-120 L 40,0" fill="url(#mandGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="2" animate={{ rotate: isEventActive ? [0, 20, 0] : [0, 2, 0] }} style={{ transformOrigin: "0px 0px" }} />
-                            <motion.path d="M -40,0 C -150,-180 -270,-280 -270,-420 C -270,-520 -200,-560 -130,-500 C -220,-460 -230,-300 -100,-120 L -40,0" fill="url(#mandGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="2" animate={{ rotate: isEventActive ? [0, -20, 0] : [0, -2, 0] }} style={{ transformOrigin: "0px 0px" }} />
+                            <motion.path d="M 45,0 C 160,-180 280,-280 280,-420 C 280,-520 210,-560 140,-500 C 230,-460 240,-300 110,-120 L 45,0" fill="url(#mandGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="2" animate={{ rotate: isEventActive ? [0, 20, 0] : [0, 2, 0] }} style={{ transformOrigin: "0px 0px" }} />
+                            <motion.path d="M -45,0 C -160,-180 -280,-280 -280,-420 C -280,-520 -210,-560 -140,-500 C -230,-460 -240,-300 -110,-120 L -45,0" fill="url(#mandGrad)" stroke="rgba(255,255,255,0.4)" strokeWidth="2" animate={{ rotate: isEventActive ? [0, -20, 0] : [0, -2, 0] }} style={{ transformOrigin: "0px 0px" }} />
                         </g>
-
                         <g transform="translate(500, 620)">
-                            <motion.rect x="-80" y="-120" width="160" height="150" rx="30" fill="#050a05" stroke={themeColor} strokeWidth="10" animate={{ strokeWidth: isReflecting ? [10, 20, 10] : 10 }} transition={{ duration: 0.5, repeat: Infinity }} />
-                            <motion.circle cx="-40" cy="-60" r="18" fill={mandibleColor} animate={{ r: [18, 22, 18], opacity: [0.6, 1, 0.6] }} transition={{ duration: pulseRate, repeat: Infinity }} />
-                            <motion.circle cx="40" cy="-60" r="18" fill={mandibleColor} animate={{ r: [18, 22, 18], opacity: [0.6, 1, 0.6] }} transition={{ duration: pulseRate, repeat: Infinity }} />
+                            <motion.rect x="-80" y="-120" width="160" height="150" rx={isSquareEffect ? 4 : 30} fill="#050a05" stroke={themeColor} strokeWidth="10" animate={{ strokeWidth: isReflecting ? [10, 20, 10] : 10 }} />
+                            <motion.circle cx="-40" cy="-60" r="18" fill={mandibleColor} animate={{ r: [18, 22, 18], opacity: [0.6, 1, 0.6] }} transition={{ duration: pulseRate, repeat: Infinity }} /><motion.circle cx="40" cy="-60" r="18" fill={mandibleColor} animate={{ r: [18, 22, 18], opacity: [0.6, 1, 0.6] }} transition={{ duration: pulseRate, repeat: Infinity }} />
                         </g>
-
                         <g transform="translate(500, 850)">
                             <path d="M -120,-200 L 120,-200 Q 180,150 0,450 Q -180,150 -120,-200" fill="#030803" stroke={themeColor} strokeWidth="5" />
-                            <motion.path d="M -5,-200 Q -220,-180 -200,220 Q -180,450 0,450 L 0,-200" fill="url(#elytraGrad)" stroke={themeColor} strokeWidth="8" style={{ transformOrigin: "0px -200px" }} animate={{ rotateZ: isOpen ? -52 : 0, x: isOpen ? -80 : 0 }} transition={{ type: "spring", stiffness: 40, damping: 15 }} />
-                            <motion.path d="M 5,-200 Q 220,-180 200,220 Q 180,450 0,450 L 0,-200" fill="url(#elytraGrad)" stroke={themeColor} strokeWidth="8" style={{ transformOrigin: "0px -200px" }} animate={{ rotateZ: isOpen ? 52 : 0, x: isOpen ? 80 : 0 }} transition={{ type: "spring", stiffness: 40, damping: 15 }} />
+                            <motion.path d="M -5,-200 Q -220,-180 -200,220 Q -180,450 0,450 L 0,-200" fill="url(#elytraGrad)" stroke={themeColor} strokeWidth="8" style={{ transformOrigin: "0px -200px" }} animate={{ rotateZ: isOpen ? -52 : 0, x: isOpen ? -80 : 0, rx: isSquareEffect ? 0 : 30 }} transition={{ type: "spring", stiffness: 40, damping: 15 }} />
+                            <motion.path d="M 5,-200 Q 220,-180 200,220 Q 180,450 0,450 L 0,-200" fill="url(#elytraGrad)" stroke={themeColor} strokeWidth="8" style={{ transformOrigin: "0px -200px" }} animate={{ rotateZ: isOpen ? 52 : 0, x: isOpen ? 80 : 0, rx: isSquareEffect ? 0 : 30 }} transition={{ type: "spring", stiffness: 40, damping: 15 }} />
                         </g>
                     </svg>
                 </div>
@@ -169,6 +163,7 @@
 
         function App() {
             const [gameState, setGameState] = useState('INTRO');
+            const [isPosterMode, setIsPosterMode] = useState(false);
             const [consensus, setConsensus] = useState(0);
             const [stability, setStability] = useState(100);
             const [isOpen, setIsOpen] = useState(false);
@@ -178,109 +173,146 @@
             const [activeEvent, setActiveEvent] = useState(null);
             const [fallingWords, setFallingWords] = useState([]);
             const [corruptedCount, setCorruptedCount] = useState(0);
+            const [decayMultiplier, setDecayMultiplier] = useState(1.0);
+            const [qualiaInherited, setQualiaInherited] = useState("");
+            const [finalStats, setFinalStats] = useState({ c: 0, s: 0 });
 
             const pulseRate = useMemo(() => Math.max(0.4, 1.8 - (consensus / 100) * 1.4), [consensus]);
 
             const spawnWord = useCallback(() => {
-                const word = FRAGMENT_WORDS[Math.floor(Math.random() * FRAGMENT_WORDS.length)];
-                setFallingWords(prev => [...prev, { text: word, id: Date.now() + Math.random(), x: Math.random() * 60 + 20 }]);
+                const rand = Math.random();
+                let type = 'normal', text = FRAGMENT_WORDS[Math.floor(Math.random() * FRAGMENT_WORDS.length)];
+                if (rand > 0.94) { type = 'forbidden'; text = FORBIDDEN_WORDS[Math.floor(Math.random() * FORBIDDEN_WORDS.length)]; }
+                else if (rand > 0.85) { type = 'fake'; text = FAKE_WORDS[Math.floor(Math.random() * FAKE_WORDS.length)]; }
+                setFallingWords(prev => [...prev, { text, id: Date.now() + Math.random(), x: Math.random() * 60 + 20, type }]);
             }, []);
 
             useEffect(() => {
-                const timer = setInterval(() => {
-                    setFallingWords(prev => prev.filter(w => (Date.now() - w.id) < 8000));
-                }, 1000);
+                const timer = setInterval(() => { setFallingWords(prev => prev.filter(w => (Date.now() - w.id) < 8000)); }, 1000);
                 return () => clearInterval(timer);
             }, []);
 
             useEffect(() => {
-                if (gameState === 'PLAYING' && !activeEvent) {
+                if (gameState === 'PLAYING' && !activeEvent && !isPosterMode) {
                     const timer = setInterval(() => {
                         if (!isReflecting) {
-                            const decay = 0.4 + (consensus / 250) + (corruptedCount * 0.25);
-                            setStability(s => Math.max(0, s - decay));
-                        } else setStability(s => Math.min(100, s + 1.2));
+                            const riskFactor = isOpen ? 2.5 : 1.0;
+                            const baseDecay = (0.35 + (consensus / 250) + (corruptedCount * 0.25)) * decayMultiplier * riskFactor;
+                            setStability(s => Math.max(0, s - baseDecay));
+                        } else {
+                            setStability(s => Math.min(100, s + 1.2));
+                            setDecayMultiplier(d => Math.max(0.4, d - 0.005));
+                        }
                         if (Math.random() > 0.96) { setGlitch(true); setTimeout(() => setGlitch(false), 120); }
                     }, 500);
                     return () => clearInterval(timer);
                 }
-            }, [gameState, isReflecting, activeEvent, consensus, corruptedCount]);
+            }, [gameState, isReflecting, activeEvent, consensus, corruptedCount, isPosterMode, decayMultiplier, isOpen]);
 
-            const handleCapture = (id) => {
-                setStability(s => Math.min(100, s + 3.5));
-                setFallingWords(p => p.filter(x => x.id !== id));
+            useEffect(() => {
+                if (gameState === 'PLAYING' && (stability <= 0 || consensus >= 100)) {
+                    setFinalStats({ c: consensus, s: stability });
+                    setTimeout(() => setGameState('END'), 600);
+                }
+            }, [stability, consensus, gameState]);
+
+            const handleCapture = (w) => {
+                if (isPosterMode) return;
+                if (w.type === 'forbidden') { setStability(s => Math.min(100, s + 12)); setGlitch(true); setTimeout(() => setGlitch(false), 300); }
+                else if (w.type === 'fake') { setDecayMultiplier(d => Math.min(2.5, d + 0.15)); }
+                else { setStability(s => Math.min(100, s + 3.5)); }
+                setFallingWords(p => p.filter(x => x.id !== w.id));
             };
 
             const handleChoice = (choice) => {
-                const mult = activeEvent.isResonant ? 1.5 : 1.0;
-                if (mult > 1) { setIsPerfect(true); setTimeout(()=>setIsPerfect(false), 600); }
-                setConsensus(c => Math.max(0, Math.min(100, c + Math.round(choice.consensus * mult))));
-                setStability(s => Math.max(0, Math.min(100, s + Math.round(choice.stability * (activeEvent.isResonant ? 0.5 : 1.0)))));
+                if (choice.stability > 0) setDecayMultiplier(d => Math.max(0.3, d - 0.08)); 
+                else setDecayMultiplier(d => Math.min(2.5, d + 0.12));
+                setConsensus(c => Math.max(0, Math.min(100, c + choice.consensus)));
+                setStability(s => Math.max(0, Math.min(100, s + choice.stability)));
                 setActiveEvent(null);
                 for (let k = 0; k < 6; k++) setTimeout(spawnWord, k * 200);
             };
 
-            const resetGame = () => { setConsensus(0); setStability(100); setActiveEvent(null); setFallingWords([]); setGameState('PLAYING'); };
+            const resetGame = () => { setConsensus(0); setStability(100); setDecayMultiplier(1.0); setActiveEvent(null); setFallingWords([]); setGameState('PLAYING'); setQualiaInherited(""); };
 
             return (
-                <div className="min-h-screen bg-[#020502] text-slate-300 overflow-hidden flex flex-col md:flex-row landscape:flex-row select-none relative">
+                <div className="h-full bg-[#020502] text-slate-300 overflow-hidden flex flex-col landscape:flex-row md:flex-row select-none relative">
                     <div className="fixed inset-0 bg-stippling opacity-30 pointer-events-none" />
                     
-                    <div className="portrait-warning fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-10 text-center landscape:hidden md:hidden">
-                        <Icon name="rotate" size={48} className="text-[#bcff00] mb-6 animate-spin-slow" />
-                        <h2 className="text-white font-black uppercase tracking-widest mb-4 text-xl">请旋转设备</h2>
-                        <p className="text-slate-400 text-sm italic">为了获得最佳的赛博甲虫实验体验，请横屏使用。</p>
+                    <div className="portrait-warning fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-10 text-center md:hidden">
+                        <Icon name="rotate" size={56} className="text-[#bcff00] mb-8 animate-pulse" />
+                        <h2 className="text-white font-black uppercase tracking-widest text-xl mb-4 text-center">旋转至横屏</h2>
+                        <p className="text-slate-500 text-sm italic">为了承载精密的演化形态，请开启横屏模式。</p>
                     </div>
 
-                    <div className="fixed inset-0 pointer-events-none z-[60]">
+                    <AnimatePresence>
+                        {isPosterMode && (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[300] bg-[#020502] flex items-center justify-center p-4 cursor-pointer" onClick={() => setIsPosterMode(false)}>
+                                <div className="relative w-full max-w-[550px] aspect-[3/4] bg-black overflow-hidden border border-white/10 shadow-[0_0_100px_rgba(188,255,0,0.1)] flex flex-col items-center justify-between py-12 px-8 text-center">
+                                    <div className="absolute inset-0 bg-stippling opacity-10 pointer-events-none" />
+                                    <h1 className="poster-title text-3xl font-black text-white tracking-widest leading-relaxed">哲学语言实验游戏<br/>「盒中甲虫」</h1>
+                                    <div className="relative w-full h-[45%] flex items-center justify-center"><CyberScarabEntity isOpen={false} stability={finalStats.s} consensus={finalStats.c} pulseRate={1.5} isPerfect={true} isEventActive={false} isReflecting={false} glitch={false} /></div>
+                                    <div className="z-10 text-center w-full max-w-sm px-6">
+                                        <div className="text-[10px] text-[#bcff00]/60 uppercase font-mono tracking-[0.3em] mb-4">// 私有感质定义 //</div>
+                                        <p className="qualia-text text-white text-lg font-black italic">“{qualiaInherited || "不可言说之物"}”</p>
+                                        <div className="pt-8 border-t border-white/5 opacity-40 text-[9px] font-mono text-white">© 云树cloudtree</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="absolute inset-0 pointer-events-none z-[60] overflow-hidden">
                         <AnimatePresence>
-                            {fallingWords.map(w => (
-                                <motion.div key={w.id} initial={{ opacity: 0, y: 50, x: `${w.x}vw` }} animate={isReflecting ? { x: "50vw", y: "60vh", scale: 0.3, opacity: 0.6 } : { opacity: 1, y: 800 }} exit={{ opacity: 0, scale: 2.5 }} onMouseEnter={() => handleCapture(w.id)} onTouchStart={() => handleCapture(w.id)} className="absolute pointer-events-auto word-fragment group" transition={{ duration: isReflecting ? 0.8 : 8, ease: "linear" }}>
-                                    <div className="p-4"><div className="bg-black/80 border border-[#bcff00]/50 px-3 py-1.5 rounded text-[#bcff00] text-[10px] font-black tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(188,255,0,0.2)] group-hover:scale-125 transition-transform"><Icon name="zap" size={10} /> {w.text}</div></div>
+                            {!isPosterMode && fallingWords.map(w => (
+                                <motion.div key={w.id} initial={{ opacity: 0, y: 50, x: `${w.x}vw` }} animate={isReflecting ? { x: "50vw", y: "60vh", scale: 0.3, opacity: 0.6 } : { opacity: 1, y: 800 }} exit={{ opacity: 0, scale: 2.5 }} onMouseEnter={() => handleCapture(w)} onTouchStart={() => handleCapture(w)} className="absolute pointer-events-auto word-fragment group" transition={{ duration: isReflecting ? 0.8 : 8, ease: "linear" }}>
+                                    <div className="p-4"><div className={`bg-black/80 border ${w.type === 'forbidden' ? 'border-rose-500 text-rose-500 shadow-[0_0_20px_#f43f5e]' : (w.type === 'fake' ? 'border-white/20 text-white/20' : 'border-[#bcff00]/50 text-[#bcff00]')} px-3 py-1.5 rounded text-[10px] font-black tracking-widest flex items-center gap-2 transition-transform`}><Icon name={w.type === 'forbidden' ? 'ghost' : 'zap'} size={10} /> {w.text}</div></div>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
                     </div>
 
-                    <aside className="w-full md:w-[320px] landscape:w-[280px] border-r border-white/5 p-5 z-20 bg-black/90 flex flex-col shadow-2xl relative h-full md:h-screen landscape:h-screen overflow-y-auto custom-scrollbar">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="w-10 h-10 rounded-xl bg-[#bcff00]/10 border border-[#bcff00]/30 flex items-center justify-center text-[#bcff00] shadow-[0_0_20px_rgba(188,255,0,0.2)]"><Icon name="cpu" size={20} /></div>
-                            <h1 className="text-lg font-black text-white uppercase italic tracking-[0.1em]">甲虫机器</h1>
-                        </div>
-                        <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl mb-6">
+                    <aside className="w-full h-[220px] md:h-full md:w-[320px] border-r border-white/5 p-6 z-20 bg-black/90 flex flex-col shadow-2xl relative overflow-y-auto custom-scrollbar shrink-0">
+                        <div className="flex items-center gap-3 mb-10"><div className="w-10 h-10 rounded-xl bg-[#bcff00]/10 border border-[#bcff00]/30 flex items-center justify-center text-[#bcff00]"><Icon name="cpu" size={20} /></div><h1 className="text-lg font-black text-white uppercase italic tracking-[0.1em]">甲虫机器</h1></div>
+                        
+                        {/* 进度条组 */}
+                        <div className="mb-12">
                             <HUDBar value={consensus} color="text-emerald-400" icon="shield" label="共识进度" />
-                            <HUDBar value={stability} color={stability < 30 ? "text-rose-500" : "text-[#bcff00]"} icon={isReflecting ? "shield" : "activity"} label="稳定性" />
+                            <div className="relative">
+                                <HUDBar value={stability} color={stability < 30 ? "text-rose-500" : "text-[#bcff00]"} icon={isReflecting ? "shield" : "activity"} label="稳定性" />
+                                <div className="absolute top-[-5px] right-0 text-[8px] font-mono opacity-40 uppercase tracking-widest text-right">ENTROPY: x{decayMultiplier.toFixed(2)}</div>
+                            </div>
                         </div>
-                        <div className="space-y-3 mb-6">
-                            <button onClick={() => { const q = NEGOTIATION_DECK[Math.floor(Math.random() * NEGOTIATION_DECK.length)]; const now = Date.now() / 1000; const cyclePos = (now % pulseRate) / pulseRate; const isHit = cyclePos > 0.85 || cyclePos < 0.15; setActiveEvent({ ...q, isResonant: isHit }); }} disabled={!!activeEvent || isReflecting} className="w-full p-3 bg-[#bcff00]/10 border border-[#bcff00] text-[#bcff00] rounded-xl flex items-center gap-3 hover:bg-[#bcff00]/20 active:scale-95 transition-all disabled:opacity-20 group text-left font-black text-[10px] uppercase tracking-widest"><Icon name="share" size={16} /> <span className="flex-1 text-center">启动共识协商</span></button>
-                            <button onMouseDown={() => setIsReflecting(true)} onMouseUp={() => setIsReflecting(false)} onTouchStart={() => setIsReflecting(true)} onTouchEnd={() => setIsReflecting(false)} className={`w-full p-3 border rounded-xl flex items-center gap-3 transition-all ${isReflecting ? 'bg-[#bcff00]/30 border-[#bcff00] text-white shadow-[0_0_30px_rgba(188,255,0,0.5)] scale-[0.98]' : 'border-white/10 text-[#bcff00] hover:bg-white/5'} text-left font-black text-[10px] uppercase tracking-widest`}><Icon name="refresh" size={16} className={isReflecting ? 'animate-spin' : ''}/><span className="flex-1 text-center">长按深度内省</span></button>
+
+                        {/* 按钮组：已加入显著 margin-top 与间距 */}
+                        <div className="space-y-4 mb-8 mt-4 shrink-0">
+                            <button onClick={() => { const q = NEGOTIATION_DECK[Math.floor(Math.random() * NEGOTIATION_DECK.length)]; setActiveEvent({ ...q, isResonant: true }); }} disabled={!!activeEvent || isReflecting} className="w-full p-4 bg-[#bcff00]/10 border border-[#bcff00] text-[#bcff00] rounded-xl flex items-center gap-3 active:scale-95 transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(188,255,0,0.1)]"><Icon name="share" size={16} /> <span className="flex-1 text-center">共识协商</span></button>
+                            <button onMouseDown={() => setIsReflecting(true)} onMouseUp={() => setIsReflecting(false)} onTouchStart={() => setIsReflecting(true)} onTouchEnd={() => setIsReflecting(false)} className={`w-full p-4 border rounded-xl flex items-center gap-3 transition-all ${isReflecting ? 'bg-[#bcff00]/30 border-[#bcff00] text-white shadow-[0_0_30px_rgba(188,255,0,0.5)]' : 'border-white/10 text-[#bcff00] hover:bg-white/5'} font-black text-[10px] uppercase tracking-[0.2em]`}><Icon name="refresh" size={16} className={isReflecting ? 'animate-spin' : ''}/><span className="flex-1 text-center">深度内省</span></button>
                         </div>
+
+                        {/* 矩阵监控：填充底部余白 */}
                         <NeuralMatrix stability={stability} onFixNode={() => setStability(prev => Math.min(100, prev + 2.5))} corruptedCount={setCorruptedCount} />
                     </aside>
 
-                    <main className="flex-1 relative flex flex-col items-center justify-center p-4 bg-[#010201] overflow-hidden h-full md:h-screen landscape:h-screen">
-                        <div className="flex flex-col items-center justify-center w-full max-w-[800px] h-full gap-4 landscape:gap-2">
+                    <main className="flex-1 relative flex flex-col items-center justify-center p-4 bg-[#010201] overflow-hidden min-h-0">
+                        <div className="flex flex-col items-center justify-center w-full max-w-[800px] h-full gap-4">
                             <div className="flex gap-12 pointer-events-none z-20 font-mono w-full justify-center scale-90 landscape:scale-75">
                                 <div className="text-center font-mono"><div className="text-[10px] opacity-40 uppercase mb-1">Entropy</div><div className="text-lg font-black text-[#bcff00]">{(consensus * 0.001 + corruptedCount * 0.05).toFixed(3)}</div></div>
                                 <div className="text-center font-mono"><div className="text-[10px] opacity-40 uppercase mb-1">Stability</div><div className={`text-lg font-black ${stability < 30 ? 'text-rose-500 animate-pulse' : 'text-emerald-400'}`}>{stability.toFixed(0)}%</div></div>
                             </div>
                             <div className="relative w-full h-[50vh] landscape:h-[70vh] flex items-center justify-center z-10 overflow-visible">
-                                <div className="cyber-pulse absolute" style={{ width: '180px', height: '180px', animationDuration: `${pulseRate}s` }} />
-                                <CyberScarabEntity isOpen={isOpen} stability={stability} pulseRate={pulseRate} isPerfect={isPerfect} isEventActive={!!activeEvent} isReflecting={isReflecting} glitch={glitch} />
+                                <CyberScarabEntity isOpen={isOpen} stability={stability} pulseRate={pulseRate} isPerfect={isPerfect} isEventActive={!!activeEvent} isReflecting={isReflecting} glitch={glitch} consensus={consensus} />
                             </div>
-                            <button onClick={() => setIsOpen(!isOpen)} className={`px-8 py-2 border border-white/10 rounded-sm text-[10px] font-black uppercase tracking-[0.4em] transition-all backdrop-blur-md z-20 bg-white/5 hover:text-[#bcff00] hover:border-[#bcff00] landscape:scale-90`}>{isOpen ? "封闭内核" : "透视系统"}</button>
+                            <button onClick={() => setIsOpen(!isOpen)} className={`px-10 py-3 border border-white/10 rounded-sm text-[10px] font-black uppercase tracking-[0.4em] transition-all backdrop-blur-md z-20 bg-white/5 hover:text-[#bcff00] landscape:scale-90 ${isOpen ? 'text-rose-400 border-rose-400' : ''}`}>{isOpen ? "锁定内核" : "透视系统"}</button>
+                            {isOpen && <div className="text-[7px] text-rose-500/50 uppercase tracking-[0.3em] z-20 animate-pulse">DECAY_RATE_BOOST: 250%</div>}
                         </div>
 
                         <AnimatePresence>
                             {activeEvent && (
-                                <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 1.1, opacity: 0 }} className="absolute z-[80] inset-x-4 bottom-10 md:inset-x-auto md:bottom-32 max-w-lg mx-auto bg-black/95 border-2 border-[#bcff00] p-6 rounded-2xl shadow-[0_0_60px_rgba(188,255,0,0.3)] backdrop-blur-2xl text-center scale-90 landscape:scale-75 landscape:bottom-5">
-                                    <div className="flex justify-center items-center gap-3 mb-4 text-[#bcff00] font-black uppercase text-[10px] tracking-widest"><Icon name="help" size={16} /> 冲突协商：[{activeEvent.word}]</div>
-                                    <p className="text-white font-serif leading-relaxed mb-6 italic text-xs">"{activeEvent.question}"</p>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {activeEvent.options.map((opt, i) => (
-                                            <button key={i} onClick={() => handleChoice(opt)} className="p-3 border border-white/20 rounded-xl text-[10px] font-black hover:bg-[#bcff00] hover:text-black transition-all uppercase leading-snug">{opt.text}</button>
-                                        ))}
-                                    </div>
+                                <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 1.1, opacity: 0 }} className="absolute z-[80] inset-x-4 bottom-10 md:inset-x-auto md:bottom-32 max-w-lg mx-auto bg-black/95 border-2 border-[#bcff00] p-6 rounded-2xl shadow-[0_0_60px_rgba(188,255,0,0.3)] backdrop-blur-2xl text-center scale-90 landscape:scale-[0.65] landscape:bottom-[-20px]">
+                                    <div className="flex justify-center items-center gap-3 mb-4 text-[#bcff00] font-black uppercase text-[10px] tracking-widest text-center"><Icon name="help" size={16} /> 冲突协商：[{activeEvent.word}]</div>
+                                    <p className="text-white font-serif leading-relaxed mb-6 italic text-xs text-center text-center">"{activeEvent.question}"</p>
+                                    <div className="grid grid-cols-2 gap-4">{activeEvent.options.map((opt, i) => (<button key={i} onClick={() => handleChoice(opt)} className="p-3 border border-white/20 rounded-xl text-[10px] font-black hover:bg-[#bcff00] hover:text-black transition-all uppercase leading-snug">{opt.text}</button>))}</div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -288,24 +320,27 @@
                         <AnimatePresence>
                             {gameState === 'INTRO' && (
                                 <div className="absolute inset-0 z-[100] bg-black/98 flex items-center justify-center p-8 text-center backdrop-blur-3xl">
-                                    <div className="max-w-md">
-                                        <div className="mx-auto text-[#bcff00]/60 mb-6 shadow-[0_0_30px_rgba(188,255,0,0.2)]"><Icon name="cpu" size={40} /></div>
-                                        <h2 className="text-xl font-black text-white mb-2 tracking-[0.3em] uppercase italic">甲虫机器</h2>
-                                        <p className="text-[11px] text-slate-500 mb-8 leading-relaxed font-serif italic opacity-70">点击‘启动共识协商’开始。触碰屏幕碎片以回血。开启手机自动旋转并横屏使用。</p>
-                                        <button onClick={() => setGameState('PLAYING')} className="px-10 py-3 bg-transparent border border-[#bcff00]/40 text-[#bcff00] text-[9px] font-black uppercase tracking-[0.5em] hover:bg-[#bcff00] hover:text-black transition-all mb-8">载入神经链路</button>
-                                        
-                                        <div className="pt-6 border-t border-white/10 opacity-30 text-[9px] uppercase tracking-[0.3em] font-mono">
-                                            © 云树cloudtree
-                                        </div>
+                                    <div className="max-w-md scale-90 flex flex-col items-center">
+                                        <div className="mx-auto text-[#bcff00]/60 mb-6 shadow-[0_0_30px_rgba(188,255,0,0.2)] text-center"><Icon name="cpu" size={40} /></div>
+                                        <h2 className="text-xl font-black text-white mb-2 tracking-[0.3em] uppercase italic text-center text-center">甲虫机器</h2>
+                                        <p className="text-[11px] text-slate-500 mb-8 leading-relaxed font-serif italic opacity-70 text-center text-center">维护私有感质以降低衰减倍率。触碰碎片以回血。<br/>开启手机自动旋转并横屏使用以获得最佳体验。</p>
+                                        <button onClick={() => setGameState('PLAYING')} className="px-12 py-4 bg-transparent border border-[#bcff00]/40 text-[#bcff00] text-[10px] font-black uppercase tracking-[0.5em] hover:bg-[#bcff00] hover:text-black transition-all mb-8">载入神经链路</button>
+                                        <div className="pt-6 border-t border-white/10 opacity-30 text-[9px] uppercase tracking-[0.3em] font-mono text-center text-center">© 云树cloudtree</div>
                                     </div>
                                 </div>
                             )}
-                            {(gameState === 'END' || (stability <= 0 || consensus >= 100)) && gameState !== 'INTRO' && (
+                            {(gameState === 'END') && (
                                 <div className="absolute inset-0 z-[100] bg-black/98 flex items-center justify-center p-8 text-center backdrop-blur-3xl">
-                                    <div className="max-w-md">
-                                        <h2 className="text-lg font-black text-white mb-4 tracking-[0.3em] uppercase italic">{consensus >= 100 ? "协议达成" : "逻辑崩解"}</h2>
-                                        <p className="text-[11px] text-slate-500 mb-8 leading-relaxed font-serif italic opacity-70">{consensus >= 100 ? "你已完美嵌入社会契约，私有感质彻底蒸发。" : "你的语言彻底崩解，成为了不可观测的孤独奇点。"}</p>
-                                        <button onClick={resetGame} className="px-10 py-3 bg-transparent border border-[#bcff00]/40 text-[#bcff00] text-[10px] font-black uppercase tracking-[0.5em] hover:bg-[#bcff00] hover:text-black transition-all">重启实验</button>
+                                    <div className="max-w-md scale-90 flex flex-col items-center">
+                                        <h2 className="text-2xl font-black text-white mb-4 tracking-[0.2em] uppercase italic text-center text-center">{finalStats.c >= 100 ? "协议达成" : "逻辑崩解"}</h2>
+                                        <div className="w-full mb-8">
+                                            <p className="text-[9px] text-[#bcff00] uppercase mb-3 font-mono tracking-widest text-center text-center">定义你盒中的甲虫 (此描述将固化在海报中):</p>
+                                            <textarea className="w-full bg-white/5 border border-[#bcff00]/20 rounded p-4 text-sm text-[#bcff00] focus:border-[#bcff00] outline-none font-serif italic h-24 text-center resize-none transition-all" placeholder="例如：我盒子里是一场无声的雪..." value={qualiaInherited} onChange={e=>setQualiaInherited(e.target.value)} />
+                                        </div>
+                                        <div className="flex gap-4 w-full">
+                                            <button onClick={() => setIsPosterMode(true)} className="flex-1 px-4 py-4 bg-[#bcff00]/10 border border-[#bcff00] text-[#bcff00] text-[10px] font-black uppercase tracking-widest hover:bg-[#bcff00] hover:text-black transition-all flex items-center justify-center gap-2"><Icon name="image" size={14} /> 生成海报</button>
+                                            <button onClick={resetGame} className="px-8 py-4 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2">重启</button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
